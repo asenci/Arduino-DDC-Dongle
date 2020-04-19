@@ -19,8 +19,7 @@ volatile int curOffset = 0;
 byte rxBuffer[dataUnitSize];
 byte txBuffer[dataUnitSize];
 
-void setup()
-{
+void setup() {
   Serial.begin(9600);
 
   #ifdef DEBUG
@@ -59,12 +58,10 @@ void setup()
   digitalWrite(hotplugPin, HIGH);
 }
 
-void loop()
-{
+void loop() {
 }
 
-void receiveEvent(int numBytes)
-{
+void receiveEvent(int numBytes) {
 
   #ifdef DEBUG
   Serial.print("*** Receiving ");
@@ -72,17 +69,14 @@ void receiveEvent(int numBytes)
   Serial.println(" bytes ***");
   #endif
 
-  for (int i = 0; Wire.available(); i++)
-  {
+  for (int i = 0; Wire.available(); i++) {
     byte b = Wire.read();
 
     // Received word offset from host, adjust cursor
-    if (i == 0 && numBytes == 1)
-    {
+    if (i == 0 && numBytes == 1) {
       curOffset = b;
     }
-    else
-    {
+    else {
       #ifdef DEBUG
       Serial.println("*** Received unsupported command from host ***");
       #endif
@@ -92,20 +86,16 @@ void receiveEvent(int numBytes)
     digitalWrite(LED_BUILTIN, HIGH);
 
     // Print received data
-    if (i > 0)
-    {
-      if (i % 16 == 0)
-      {
+    if (i > 0) {
+      if (i % 16 == 0) {
         Serial.println();
       }
-      else
-      {
+      else {
         Serial.print(" ");
       }
     }
 
-    if (b < 0x10)
-    {
+    if (b < 0x10) {
       Serial.print("0");
     }
 
@@ -120,8 +110,7 @@ void receiveEvent(int numBytes)
   #endif
 }
 
-void requestEvent()
-{
+void requestEvent() {
   #ifdef DEBUG
   Serial.print("*** Received read request, sending ");
   Serial.print(dataUnitSize, DEC);
@@ -134,22 +123,17 @@ void requestEvent()
   EEPROM.get(curOffset, txBuffer);
 
   #ifdef DEBUG
-  for (int i = 0; i < dataUnitSize; i++)
-  {
-    if (i > 0)
-    {
-      if (i % 16 == 0)
-      {
+  for (int i = 0; i < dataUnitSize; i++) {
+    if (i > 0) {
+      if (i % 16 == 0) {
         Serial.println();
       }
-      else
-      {
+      else {
         Serial.print(" ");
       }
     }
 
-    if (txBuffer[i] < 0x10)
-    {
+    if (txBuffer[i] < 0x10) {
       Serial.print("0");
     }
 
@@ -173,8 +157,7 @@ void requestEvent()
   curOffset += bytesSent;
 
   // Reset cursor if overflow
-  if (curOffset > EEPROM.length())
-  {
+  if (curOffset > EEPROM.length()) {
     curOffset = 0;
   }
 
