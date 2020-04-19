@@ -17,14 +17,15 @@ int curOffset = 0;
 
 void receiveEvent(int numBytes)
 {
+
+  #ifdef DEBUG
   Serial.print("*** Receiving ");
   Serial.print(numBytes, DEC);
   Serial.println(" bytes ***");
+  #endif
 
   for (int i = 0; Wire.available(); i++)
   {
-    digitalWrite(LED_BUILTIN, HIGH);
-
     byte b = Wire.read();
 
     // Received word offset from host, adjust cursor
@@ -32,6 +33,15 @@ void receiveEvent(int numBytes)
     {
       curOffset = b;
     }
+    else
+    {
+      #ifdef DEBUG
+      Serial.println("*** Received unsupported command from host ***")
+      #endif
+    }
+
+    #ifdef DEBUG
+    digitalWrite(LED_BUILTIN, HIGH);
 
     // Print received data
     if (i > 0)
@@ -54,34 +64,45 @@ void receiveEvent(int numBytes)
     Serial.print(b, HEX);
 
     digitalWrite(LED_BUILTIN, LOW);
+    #endif
   }
+
+  #ifdef DEBUG
   Serial.println();
+  #endif
 }
 
 void requestEvent()
 {
+  #ifdef DEBUG
   Serial.print("*** Received read request, sending 128 bytes from offset 0x");
   Serial.print(curOffset, HEX);
   Serial.println(" ***");
+  #endif
 
   int sent = Wire.write(& edid[curOffset], 128);
 
+  // Advance cursor by the number of sent bytes
   curOffset += sent;
 
+  // Reset cursor if overflow
   if (curOffset > sizeof(edid))
   {
     curOffset = 0;
   }
 
+  #ifdef DEBUG
   Serial.print("*** Sent ");
   Serial.print(sent, DEC);
   Serial.println(" bytes to host ***");
+  #endif
 }
 
 void setup()
 {
   Serial.begin(9600);
 
+  #ifdef DEBUG
   // Wait for serial interface to be ready
   delay(2000);
 
@@ -90,12 +111,14 @@ void setup()
   // Use built-in LED for status
   pinMode(LED_BUILTIN, OUTPUT);
   digitalWrite(LED_BUILTIN, LOW);
+  #endif
 
   // Use hotplugPin for hotplug detection
   // Monitor must pull-up to a +5v reference to signal presence to the host
   pinMode(hotplugPin, OUTPUT);
   digitalWrite(hotplugPin, LOW);
 
+  // Register i2c slave
   Wire.begin(ddcPriAddress);
 
   // Disable SDA/SCL pull-up
@@ -106,9 +129,12 @@ void setup()
   Wire.onReceive(receiveEvent);
   Wire.onRequest(requestEvent);
 
+  #ifdef DEBUG
   delay(200);
 
   Serial.println("**** Enabling hotplug ****");
+  #endif
+
   digitalWrite(hotplugPin, HIGH);
 }
 
