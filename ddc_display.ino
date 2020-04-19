@@ -1,102 +1,23 @@
+#include <EEPROM.h>
 #include "src/Wire128/src/Wire.h"
 
 // Enable debugging
 // #define DEBUG
 
+// Constants
+const int dataUnitSize = 128;
+
 const int hotplugPin = 7;
+
 const int ddcPriAddress = 0xA0 >> 1;
 const int ddcSecAddress = 0xA4 >> 1;
 const int ddcSpAddress = 0x60 >> 1;
 
-byte edid[256] =
-{
-  0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x1E, 0x6D, 0xFD, 0x76, 0x3F, 0x31, 0x02, 0x00, 0x05, 0x1B, 0x01, 0x03, 0x80, 0x50, 0x22, 0x78, 0xEA, 0xCA, 0x95, 0xA6, 0x55, 0x4E, 0xA1, 0x26, 0x0F, 0x50, 0x54, 0x25, 0x6B, 0x80, 0xD1, 0xCF, 0xD1, 0xE8, 0xD1, 0xFC, 0xA9, 0xFC, 0x81, 0xBC, 0x81, 0xFC, 0x61, 0x7C, 0x71, 0x7C, 0x64, 0x4B, 0x00, 0xF0, 0xA0, 0x38, 0x46, 0x40, 0x30, 0x20, 0xAA, 0x00, 0x1E, 0x4E, 0x31, 0x00, 0x00, 0x1A, 0xEC, 0x5E, 0x00, 0xF0, 0xA0, 0x38, 0x4E, 0x40, 0x30, 0x20, 0xAA, 0x00, 0x1E, 0x4E, 0x31, 0x00, 0x00, 0x1A, 0x00, 0x00, 0x00, 0xFD, 0x00, 0x38, 0x90, 0x1E, 0xA4, 0x2D, 0x00, 0x0A, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x00, 0x00, 0x00, 0xFC, 0x00, 0x4C, 0x47, 0x20, 0x55, 0x4C, 0x54, 0x52, 0x41, 0x57, 0x49, 0x44, 0x45, 0x0A, 0x01, 0xB5, 0x02, 0x03, 0x26, 0xF1, 0x23, 0x09, 0x07, 0x07, 0x4B, 0x10, 0x04, 0x03, 0x01, 0x1F, 0x13, 0x59, 0xDA, 0x12, 0x05, 0x14, 0x83, 0x01, 0x00, 0x00, 0x65, 0x03, 0x0C, 0x00, 0x10, 0x00, 0x67, 0xD8, 0x5D, 0xC4, 0x01, 0x5A, 0x80, 0x00, 0x50, 0x78, 0x00, 0xA0, 0xA0, 0x38, 0x35, 0x40, 0x30, 0x20, 0xCA, 0x00, 0x1E, 0x4E, 0x31, 0x00, 0x00, 0x1A, 0x13, 0x90, 0x00, 0xA0, 0xA0, 0x38, 0x32, 0x40, 0x30, 0x20, 0xCA, 0x00, 0x1E, 0x4E, 0x31, 0x00, 0x00, 0x1A, 0xE4, 0xAC, 0x00, 0xA0, 0xA0, 0x38, 0x32, 0x40, 0x30, 0x30, 0xCA, 0x00, 0x1E, 0x4E, 0x31, 0x00, 0x00, 0x1A, 0x00, 0x00, 0x00, 0xFF, 0x00, 0x37, 0x30, 0x35, 0x4E, 0x54, 0x56, 0x53, 0x34, 0x37, 0x36, 0x37, 0x39, 0x0A, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x34
-};
-
-int curOffset = 0;
-
-void receiveEvent(int numBytes)
-{
-
-  #ifdef DEBUG
-  Serial.print("*** Receiving ");
-  Serial.print(numBytes, DEC);
-  Serial.println(" bytes ***");
-  #endif
-
-  for (int i = 0; Wire.available(); i++)
-  {
-    byte b = Wire.read();
-
-    // Received word offset from host, adjust cursor
-    if (numBytes == 1)
-    {
-      curOffset = b;
-    }
-    else
-    {
-      #ifdef DEBUG
-      Serial.println("*** Received unsupported command from host ***")
-      #endif
-    }
-
-    #ifdef DEBUG
-    digitalWrite(LED_BUILTIN, HIGH);
-
-    // Print received data
-    if (i > 0)
-    {
-      if (i % 16 == 0)
-      {
-        Serial.println();
-      }
-      else
-      {
-        Serial.print(" ");
-      }
-    }
-
-    if (b < 0x10)
-    {
-      Serial.print("0");
-    }
-
-    Serial.print(b, HEX);
-
-    digitalWrite(LED_BUILTIN, LOW);
-    #endif
-  }
-
-  #ifdef DEBUG
-  Serial.println();
-  #endif
-}
-
-void requestEvent()
-{
-  #ifdef DEBUG
-  Serial.print("*** Received read request, sending 128 bytes from offset 0x");
-  Serial.print(curOffset, HEX);
-  Serial.println(" ***");
-  #endif
-
-  int sent = Wire.write(& edid[curOffset], 128);
-
-  // Advance cursor by the number of sent bytes
-  curOffset += sent;
-
-  // Reset cursor if overflow
-  if (curOffset > sizeof(edid))
-  {
-    curOffset = 0;
-  }
-
-  #ifdef DEBUG
-  Serial.print("*** Sent ");
-  Serial.print(sent, DEC);
-  Serial.println(" bytes to host ***");
-  #endif
-}
+// Variables
+int bytesSent = 0;
+volatile int curOffset = 0;
+byte rxBuffer[dataUnitSize];
+byte txBuffer[dataUnitSize];
 
 void setup()
 {
@@ -140,4 +61,126 @@ void setup()
 
 void loop()
 {
+}
+
+void receiveEvent(int numBytes)
+{
+
+  #ifdef DEBUG
+  Serial.print("*** Receiving ");
+  Serial.print(numBytes, DEC);
+  Serial.println(" bytes ***");
+  #endif
+
+  for (int i = 0; Wire.available(); i++)
+  {
+    byte b = Wire.read();
+
+    // Received word offset from host, adjust cursor
+    if (i == 0 && numBytes == 1)
+    {
+      curOffset = b;
+    }
+    else
+    {
+      #ifdef DEBUG
+      Serial.println("*** Received unsupported command from host ***");
+      #endif
+    }
+
+    #ifdef DEBUG
+    digitalWrite(LED_BUILTIN, HIGH);
+
+    // Print received data
+    if (i > 0)
+    {
+      if (i % 16 == 0)
+      {
+        Serial.println();
+      }
+      else
+      {
+        Serial.print(" ");
+      }
+    }
+
+    if (b < 0x10)
+    {
+      Serial.print("0");
+    }
+
+    Serial.print(b, HEX);
+
+    digitalWrite(LED_BUILTIN, LOW);
+    #endif
+  }
+
+  #ifdef DEBUG
+  Serial.println();
+  #endif
+}
+
+void requestEvent()
+{
+  #ifdef DEBUG
+  Serial.print("*** Received read request, sending ");
+  Serial.print(dataUnitSize, DEC);
+  Serial.print(" bytes from offset 0x");
+  Serial.print(curOffset, HEX);
+  Serial.println(" ***");
+  #endif
+
+  // Read from EEPROM
+  EEPROM.get(curOffset, txBuffer);
+
+  #ifdef DEBUG
+  for (int i = 0; i < dataUnitSize; i++)
+  {
+    if (i > 0)
+    {
+      if (i % 16 == 0)
+      {
+        Serial.println();
+      }
+      else
+      {
+        Serial.print(" ");
+      }
+    }
+
+    if (txBuffer[i] < 0x10)
+    {
+      Serial.print("0");
+    }
+
+    Serial.print(txBuffer[i], HEX);
+  }
+  Serial.println();
+  #endif
+
+  #ifdef DEBUG
+  digitalWrite(LED_BUILTIN, HIGH);
+  #endif
+
+  // Send to host
+  bytesSent = Wire.write(txBuffer, dataUnitSize);
+
+  #ifdef DEBUG
+  digitalWrite(LED_BUILTIN, LOW);
+  #endif
+
+  // Advance cursor by the number of sent bytes
+  curOffset += bytesSent;
+
+  // Reset cursor if overflow
+  if (curOffset > EEPROM.length())
+  {
+    curOffset = 0;
+  }
+
+  #ifdef DEBUG
+  Serial.print("*** Sent ");
+  Serial.print(bytesSent, DEC);
+  Serial.println(" bytes to host ***");
+  #endif
 }
