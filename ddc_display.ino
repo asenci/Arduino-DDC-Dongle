@@ -7,17 +7,17 @@
 // Constants
 const int dataUnitSize = 128;
 
-const int hotplugPin = 7;
-
 const int ddcPriAddress = 0xA0 >> 1;
 const int ddcSecAddress = 0xA4 >> 1;
 const int ddcSpAddress = 0x60 >> 1;
 
+const int hotplugPin = 7;
+
 // Variables
-int bytesSent = 0;
 volatile int curOffset = 0;
 byte rxBuffer[dataUnitSize];
 byte txBuffer[dataUnitSize];
+
 
 void setup() {
   Serial.begin(9600);
@@ -58,11 +58,13 @@ void setup() {
   digitalWrite(hotplugPin, HIGH);
 }
 
+
 void loop() {
 }
 
-void receiveEvent(int numBytes) {
 
+
+void receiveEvent(int numBytes) {
   #ifdef DEBUG
   Serial.print("*** Receiving ");
   Serial.print(numBytes, DEC);
@@ -70,13 +72,12 @@ void receiveEvent(int numBytes) {
   #endif
 
   for (int i = 0; Wire.available(); i++) {
-    byte b = Wire.read();
+    byte cmd = Wire.read();
 
     // Received word offset from host, adjust cursor
     if (i == 0 && numBytes == 1) {
-      curOffset = b;
-    }
-    else {
+      curOffset = cmd;
+    } else if (i == 0) {
       #ifdef DEBUG
       Serial.println("*** Received unsupported command from host ***");
       #endif
@@ -95,11 +96,11 @@ void receiveEvent(int numBytes) {
       }
     }
 
-    if (b < 0x10) {
+    if (cmd < 0x10) {
       Serial.print("0");
     }
 
-    Serial.print(b, HEX);
+    Serial.print(cmd, HEX);
 
     digitalWrite(LED_BUILTIN, LOW);
     #endif
@@ -109,6 +110,7 @@ void receiveEvent(int numBytes) {
   Serial.println();
   #endif
 }
+
 
 void requestEvent() {
   #ifdef DEBUG
@@ -147,7 +149,7 @@ void requestEvent() {
   #endif
 
   // Send to host
-  bytesSent = Wire.write(txBuffer, dataUnitSize);
+  int bytesSent = Wire.write(txBuffer, dataUnitSize);
 
   #ifdef DEBUG
   digitalWrite(LED_BUILTIN, LOW);
