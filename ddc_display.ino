@@ -104,7 +104,7 @@ void setup()
 
   #ifdef DEBUG
   // Wait for serial interface to be ready
-  delay(2000);
+  while (!Serial) {}
 
   Serial.println("**** Ready ****");
 
