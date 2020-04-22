@@ -7,7 +7,7 @@ void xModemFlush() {
     Serial.setTimeout(1000);
 
 #ifdef DEBUG
-    Serial.println("*** Flushing data on the serial buffer ***");
+    Serial.println(F("*** Flushing data on the serial buffer ***"));
 #endif
 
     for (int i = 0; Serial.readBytes(&devNull, 1); i++) {
@@ -20,12 +20,12 @@ void xModemFlush() {
                 Serial.println();
             }
             else {
-                Serial.print(" ");
+                Serial.print(F(" "));
             }
         }
 
         if (devNull < 0x10) {
-            Serial.print("0");
+            Serial.print(F("0"));
         }
 
         Serial.print(devNull, HEX);
@@ -56,20 +56,18 @@ bool xModemReadCmd(byte *data, unsigned long timeout) {
 }
 
 bool xModemReadCmd(byte *data, unsigned long timeout, int tries) {
-    int receivedBytes;
-
     Serial.setTimeout(timeout);
 
     for (int i = 0; i < tries; i++) {
         // Wait for command
-        receivedBytes = Serial.readBytes(data, 1);
+        int receivedBytes = Serial.readBytes(data, 1);
 
         if (receivedBytes == 1) {
             return true;
         }
 
 #ifdef DEBUG
-        Serial.println("* ERROR: XMODEM TIMEOUT *");
+        Serial.println(F("* ERROR: XMODEM TIMEOUT *"));
 #endif
         if (tries > 1) {
             // Send NAK
@@ -78,7 +76,7 @@ bool xModemReadCmd(byte *data, unsigned long timeout, int tries) {
     }
 
 #ifdef DEBUG
-    Serial.println("* ERROR: XMODEM TIMED OUT WAITING FOR CMD *");
+    Serial.println(F("* ERROR: XMODEM TIMED OUT WAITING FOR CMD *"));
 #endif
     return false;
 }

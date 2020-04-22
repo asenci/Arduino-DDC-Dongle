@@ -9,9 +9,9 @@ volatile int curOffset = 0;
 
 void receiveDdcCommand(int numBytes) {
 #ifdef DEBUG
-    Serial.print("*** Receiving ");
+    Serial.print(F("*** Receiving "));
     Serial.print(numBytes, DEC);
-    Serial.println(" bytes ***");
+    Serial.println(F(" bytes ***"));
 #endif
 
     for (int i = 0; Wire.available(); i++) {
@@ -22,7 +22,7 @@ void receiveDdcCommand(int numBytes) {
             curOffset = cmd;
         } else if (i == 0) {
 #ifdef DEBUG
-            Serial.println("*** Received unsupported command from host ***");
+            Serial.println(F("*** Received unsupported command from host ***"));
 #endif
         }
 
@@ -35,12 +35,12 @@ void receiveDdcCommand(int numBytes) {
         Serial.println();
       }
       else {
-        Serial.print(" ");
+        Serial.print(F(" "));
       }
     }
 
     if (cmd < 0x10) {
-      Serial.print("0");
+      Serial.print(F("0"));
     }
 
     Serial.print(cmd, HEX);
@@ -61,11 +61,11 @@ void sendDdcData() {
 #ifdef DEBUG
     digitalWrite(LED_BUILTIN, HIGH);
 
-    Serial.print("*** Received read request, sending ");
+    Serial.print(F("*** Received read request, sending "));
     Serial.print(edidUnitSize, DEC);
-    Serial.print(" bytes from offset 0x");
+    Serial.print(F(" bytes from offset 0x"));
     Serial.print(curOffset, HEX);
-    Serial.println(" ***");
+    Serial.println(F(" ***"));
 
     for (int i = 0; i < edidUnitSize; i++) {
         if (i > 0) {
@@ -73,12 +73,12 @@ void sendDdcData() {
               Serial.println();
             }
             else {
-              Serial.print(" ");
+              Serial.print(F(" "));
             }
         }
 
         if (EEPROM[curOffset+i] < 0x10) {
-            Serial.print("0");
+            Serial.print(F("0"));
         }
 
         Serial.print(EEPROM[curOffset+i], HEX);
@@ -100,9 +100,9 @@ void sendDdcData() {
     }
 
 #ifdef DEBUG
-    Serial.print("*** Sent ");
+    Serial.print(F("*** Sent "));
     Serial.print(bytesSent, DEC);
-    Serial.println(" bytes to host ***");
+    Serial.println(F(" bytes to host ***"));
 
     digitalWrite(LED_BUILTIN, LOW);
 #endif
@@ -115,45 +115,45 @@ void dumpEDID() {
     // E-DDC specifies monitor must be ready to reply to host within 20ms
     delay(20);
 
-    Serial.println("*** Reading monitor primary EDID data ***");
+    Serial.println(F("*** Reading monitor primary EDID data ***"));
 
     // Read primary EDID data
     if (!readAtOffset(edidData, edidUnitSize)) {
-        Serial.println("*** Error reading EDID data ***");
+        Serial.println(F("*** Error reading EDID data ***"));
         return;
     }
 
     hexDump(edidData, edidUnitSize);
 
     if (!verifyCheckSum(edidData, edidUnitSize)) {
-        Serial.println("*** Invalid checksum for monitor primary EDID data ***");
+        Serial.println(F("*** Invalid checksum for monitor primary EDID data ***"));
         return;
     }
 
     int numExtensions = edidData[edidNumExtPos];
-    Serial.print("*** EDID has ");
+    Serial.print(F("*** EDID has "));
     Serial.print(numExtensions, DEC);
-    Serial.println(" extensions ***");
+    Serial.println(F(" extensions ***"));
 
     for (int i = 1; i <= numExtensions; i++) {
-        Serial.print("*** Reading EDID extension ");
+        Serial.print(F("*** Reading EDID extension "));
         Serial.print(i, DEC);
-        Serial.println(" ***");
+        Serial.println(F(" ***"));
 
         int offset = i*edidUnitSize;
         if (!readAtOffset(edidData, edidUnitSize, offset)) {
-            Serial.println("*** Error reading EDID extension ");
+            Serial.println(F("*** Error reading EDID extension "));
             Serial.print(i, DEC);
-            Serial.println(" ***");
+            Serial.println(F(" ***"));
             continue;
         }
 
         hexDump(edidData, edidUnitSize);
 
         if (!verifyCheckSum(&edidData[offset], edidUnitSize)) {
-            Serial.print("*** Invalid checksum for EDID extension ");
+            Serial.print(F("*** Invalid checksum for EDID extension "));
             Serial.print(i, DEC);
-            Serial.println(" ***");
+            Serial.println(F(" ***"));
             continue;
         }
     }
@@ -168,13 +168,13 @@ bool readAtOffset(byte *data, int dataSize, int offset) {
 }
 
 bool readAtOffset(byte *data, int dataSize, int offset, int i2cAddress) {
-    Serial.print("*** Reading ");
+    Serial.print(F("*** Reading "));
     Serial.print(dataSize, DEC);
-    Serial.print(" bytes from address 0x");
+    Serial.print(F(" bytes from address 0x"));
     Serial.print(i2cAddress << 1, HEX);
-    Serial.print(" at offset 0x");
+    Serial.print(F(" at offset 0x"));
     Serial.print(offset, HEX);
-    Serial.println(" ***");
+    Serial.println(F(" ***"));
 
     // Set word offset
     Wire.beginTransmission(i2cAddress);
@@ -190,7 +190,7 @@ bool readAtOffset(byte *data, int dataSize, int offset, int i2cAddress) {
         }
 
         if (Wire.available() < 1) {
-            Serial.println("*ERROR: NO DATA AVAILABLE*");
+            Serial.println(F("*ERROR: NO DATA AVAILABLE*"));
             return false;
         }
 
@@ -201,7 +201,7 @@ bool readAtOffset(byte *data, int dataSize, int offset, int i2cAddress) {
 
     // Empty the buffer
     if (Wire.available() > 0) {
-        Serial.println("*ERROR: BUFFER OVERFLOW*");
+        Serial.println(F("*ERROR: BUFFER OVERFLOW*"));
     }
 
     return true;
@@ -214,12 +214,12 @@ bool hexDump(byte *data, int dataSize) {
                 Serial.println();
             }
             else {
-                Serial.print(" ");
+                Serial.print(F(" "));
             }
         }
 
         if (data[i] < 0x10) {
-            Serial.print("0");
+            Serial.print(F("0"));
         }
 
         Serial.print(data[i], HEX);

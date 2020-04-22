@@ -22,7 +22,7 @@ void setupDisplay() {
 
 #ifdef DEBUG
     delay(200);
-    Serial.println("**** Enabling hotplug ****");
+    Serial.println(F("**** Enabling hotplug ****"));
 #endif
     digitalWrite(hotPlugDetectPin, HIGH);
 }

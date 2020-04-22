@@ -8,11 +8,11 @@ bool processCommand(byte cmd) {
     switch (cmd) {
         case asciiSOH:
 #ifdef DEBUG
-            Serial.println("*** Starting data transfer from UART to EEPROM ***");
+            Serial.println(F("*** Starting data transfer from UART to EEPROM ***"));
 #endif
             if (!receiveEEPROM()) {
 #ifdef DEBUG
-                Serial.println("*** Data transfer failed ***");
+                Serial.println(F("*** Data transfer failed ***"));
 #endif
                 return false;
             }
@@ -20,11 +20,11 @@ bool processCommand(byte cmd) {
 
         case asciiNAK:
 #ifdef DEBUG
-            Serial.println("*** Starting data transfer from EEPROM to UART ***");
+            Serial.println(F("*** Starting data transfer from EEPROM to UART ***"));
 #endif
             if (!sendEEPROM()) {
 #ifdef DEBUG
-                Serial.println("*** Data transfer failed ***");
+                Serial.println(F("*** Data transfer failed ***"));
 #endif
                 return false;
             }
@@ -32,7 +32,7 @@ bool processCommand(byte cmd) {
 
         default:
 #ifdef DEBUG
-            Serial.println("* ERROR: INVALID UART COMMAND *");
+            Serial.println(F("* ERROR: INVALID UART COMMAND *"));
 #endif
             return false;
     }
@@ -52,21 +52,21 @@ bool receiveEEPROM() {
     while (true) {
         if (!xModemReadCmd(&cmd, 10000, 10)) {
 #ifdef DEBUG
-            Serial.println("* ERROR: XMODEM TRANSFER ABORTED AFTER 10 TIMEOUTS *");
+            Serial.println(F("* ERROR: XMODEM TRANSFER ABORTED AFTER 10 TIMEOUTS *"));
 #endif
             return false;
         }
 
 #ifdef DEBUG
-        Serial.print("*** Received command from sender: 0x");
+        Serial.print(F("*** Received command from sender: 0x"));
         Serial.print(cmd, HEX);
-        Serial.println(" ***");
+        Serial.println(F(" ***"));
 #endif
 
         switch(cmd) {
             case asciiCAN:
 #ifdef DEBUG
-                Serial.println("* ERROR: XMODEM TRANSFER CANCELLED BY SENDER *");
+                Serial.println(F("* ERROR: XMODEM TRANSFER CANCELLED BY SENDER *"));
 #endif
                 return false;
 
@@ -79,7 +79,7 @@ bool receiveEEPROM() {
                 blockData[xModemBlockCmdPos] = cmd;
                 if (!xModemReadBlock(blockData)) {
 #ifdef DEBUG
-                    Serial.println("* ERROR: XMODEM ERROR RECEIVING DATA BLOCK *");
+                    Serial.println(F("* ERROR: XMODEM ERROR RECEIVING DATA BLOCK *"));
 #endif
 
                     xModemFlush();
@@ -89,7 +89,7 @@ bool receiveEEPROM() {
                 }
 
 #ifdef DEBUG
-                Serial.println("*** Received payload via XMODEM ***");
+                Serial.println(F("*** Received payload via XMODEM ***"));
                 for (int i = 0; i < xModemBlockSize; i++) {
                     digitalWrite(LED_BUILTIN, HIGH);
 
@@ -101,12 +101,12 @@ bool receiveEEPROM() {
                             Serial.println();
                         }
                         else {
-                            Serial.print(" ");
+                            Serial.print(F(" "));
                         }
                     }
 
                     if (b < 0x10) {
-                        Serial.print("0");
+                        Serial.print(F("0"));
                     }
 
                     Serial.print(b, HEX);
@@ -119,9 +119,9 @@ bool receiveEEPROM() {
                 int blockSeq = blockData[xModemBlockSeqPos];
                 if (blockSeq == blockPrevSeq) {
 #ifdef DEBUG
-                    Serial.print("* WARNING: XMODEM DUPLICATE BLK SEQ: ");
+                    Serial.print(F("* WARNING: XMODEM DUPLICATE BLK SEQ: "));
                     Serial.print(blockSeq, DEC);
-                    Serial.println(" *");
+                    Serial.println(F(" *"));
 #endif
 
                     xModemFlush();
@@ -131,9 +131,9 @@ bool receiveEEPROM() {
                 }
                 if (blockSeq != (blockPrevSeq + 1)) {
 #ifdef DEBUG
-                    Serial.print("* ERROR: XMODEM INVALID BLK SEQ: ");
+                    Serial.print(F("* ERROR: XMODEM INVALID BLK SEQ: "));
                     Serial.print(blockSeq, DEC);
-                    Serial.println(" *");
+                    Serial.println(F(" *"));
 #endif
 
                     xModemFlush();
@@ -145,9 +145,9 @@ bool receiveEEPROM() {
                 int blockRevSeq = blockData[xModemBlockRevSeqPos];
                 if (blockRevSeq != (255 - blockSeq)) {
 #ifdef DEBUG
-                    Serial.print("* ERROR: XMODEM INVALID BLK REV SEQ: ");
+                    Serial.print(F("* ERROR: XMODEM INVALID BLK REV SEQ: "));
                     Serial.print(blockRevSeq, DEC);
-                    Serial.println(" *");
+                    Serial.println(F(" *"));
 #endif
 
                     xModemFlush();
@@ -165,9 +165,9 @@ bool receiveEEPROM() {
 
                 if (calcChecksum != blockChecksum) {
 #ifdef DEBUG
-                    Serial.print("* ERROR: XMODEM INVALID BLK CKSUM: 0x");
+                    Serial.print(F("* ERROR: XMODEM INVALID BLK CKSUM: 0x"));
                     Serial.print(blockChecksum, HEX);
-                    Serial.println(" *");
+                    Serial.println(F(" *"));
 #endif
 
                     xModemFlush();
@@ -192,7 +192,7 @@ bool receiveEEPROM() {
 
             default:
 #ifdef DEBUG
-                Serial.println("* ERROR: INVALID XMODEM COMMAND *");
+                Serial.println(F("* ERROR: INVALID XMODEM COMMAND *"));
 #endif
                 Serial.write(asciiCAN);
                 return false;
@@ -207,7 +207,7 @@ bool sendEEPROM() {
     while (true) {
         if (!xModemReadCmd(&cmd, 60000)) {
 #ifdef DEBUG
-            Serial.println("* ERROR: XMODEM TRANSFER TIMED OUT *");
+            Serial.println(F("* ERROR: XMODEM TRANSFER TIMED OUT *"));
 #endif
             return false;
         }
@@ -225,21 +225,21 @@ bool sendEEPROM() {
 
             case asciiCAN:
 #ifdef DEBUG
-                Serial.println("* ERROR: XMODEM TRANSFER CANCELLED BY RECEIVER *");
+                Serial.println(F("* ERROR: XMODEM TRANSFER CANCELLED BY RECEIVER *"));
 #endif
                 return false;
 
             case asciiNAK:
                 if (blockSeq > 0) {
 #ifdef DEBUG
-                    Serial.println("* WARNING: XMODEM NAK RECEIVED, RETRANSMITING BLOCK *");
+                    Serial.println(F("* WARNING: XMODEM NAK RECEIVED, RETRANSMITING BLOCK *"));
 #endif
                 }
                 break;
 
             default:
 #ifdef DEBUG
-                Serial.println("* ERROR: INVALID XMODEM COMMAND, ABORTING TRANSFER *");
+                Serial.println(F("* ERROR: INVALID XMODEM COMMAND, ABORTING TRANSFER *"));
 #endif
                 Serial.write(asciiCAN);
                 return false;

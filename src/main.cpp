@@ -9,6 +9,8 @@
 bool hostMode;
 int hotplugDetected = LOW;
 
+
+// cppcheck-suppress unusedFunction
 void setup() {
     // Use hotplugPin for hotplug detection
     // Monitor must pull-up to a +5v reference to signal presence to the host
@@ -22,7 +24,7 @@ void setup() {
     // Wait for serial interface to be ready
     while (!Serial) {}
 
-    Serial.println("**** Ready ****");
+    Serial.println(F("**** Ready ****"));
 
     // Use built-in LED for status
     pinMode(LED_BUILTIN, OUTPUT);
@@ -33,7 +35,7 @@ void setup() {
     // Enter host mode if monitor detected
     if (digitalRead(hotPlugDetectPin) == HIGH) {
 #ifdef DEBUG
-        Serial.println("**** Monitor detected on hotplug pin, entering host mode ****");
+        Serial.println(F("**** Monitor detected on hotplug pin, entering host mode ****"));
 #endif
         setupHost();
         hostMode = true;
@@ -44,17 +46,18 @@ void setup() {
 }
 
 
+// cppcheck-suppress unusedFunction
 void loop() {
     while (Serial.available()) {
         byte cmd = Serial.read();
 #ifdef DEBUG
-        Serial.print("**** Received command from UART: 0x");
+        Serial.print(F("**** Received command from UART: 0x"));
         Serial.print(cmd, HEX);
-        Serial.println(" ****");
+        Serial.println(F(" ****"));
 #endif
         if (!processCommand(cmd)) {
 #ifdef DEBUG
-            Serial.println("**** Failed to execute command ****");
+            Serial.println(F("**** Failed to execute command ****"));
 #endif
         }
     }
@@ -66,9 +69,9 @@ void loop() {
         // Signal on hotPlugDetectPin raised to +5v,
         // read EDID data from monitor
         if (hotplugDetected == LOW && newState == HIGH) {
-            Serial.println("**** Monitor detected, reading EDID data ****");
+            Serial.println(F("**** Monitor detected, reading EDID data ****"));
             dumpEDID();
-            Serial.println("**** Done ****");
+            Serial.println(F("**** Done ****"));
         }
 
         hotplugDetected = newState;
