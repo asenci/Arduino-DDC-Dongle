@@ -1,5 +1,5 @@
-#ifndef XMODEM
-#define XMODEM
+#ifndef XMODEM_H
+#define XMODEM_H
 
 #include <Arduino.h>
 
@@ -22,4 +22,4 @@ bool xModemReadCmd(byte *, unsigned long timeout);
 
 bool xModemReadCmd(byte *, unsigned long timeout, int tries);
 
-#endif //XMODEM
+#endif //XMODEM_H

@@ -1,14 +1,21 @@
 #include <Arduino.h>
 #include <commands.h>
 #include <ddc.h>
-#include <Wire128.h>
+#include <pins.h>
+#include <setup.h>
 
 
-// Constants
-const int hotPlugDetectPin = 7;
-
+// Variables
+bool hostMode;
+int hotplugDetected = LOW;
 
 void setup() {
+    // Use hotplugPin for hotplug detection
+    // Monitor must pull-up to a +5v reference to signal presence to the host
+    // requires a external pull-down resistor for stable detection
+    pinMode(hotPlugDetectPin, INPUT);
+    digitalWrite(hotPlugDetectPin, LOW);
+
     Serial.begin(9600);
 
 #ifdef DEBUG
@@ -22,29 +29,18 @@ void setup() {
     digitalWrite(LED_BUILTIN, LOW);
 #endif
 
-    // Use hotplugPin for hotplug detection
-    // Monitor must pull-up to a +5v reference to signal presence to the host
-    pinMode(hotPlugDetectPin, OUTPUT);
-    digitalWrite(hotPlugDetectPin, LOW);
-
-    // Register i2c slave
-    Wire.begin(ddcPriAddress);
-
-    // Disable SDA/SCL pull-up
-    // E-DDC specifies monitor must pull-up SCL to a +5v reference using a 47k ohm resistor
-    digitalWrite(SDA, LOW);
-    digitalWrite(SCL, LOW);
-
-    Wire.onReceive(receiveDdcCommand);
-    Wire.onRequest(sendDdcData);
-
+    delay(20);
+    // Enter host mode if monitor detected
+    if (digitalRead(hotPlugDetectPin) == HIGH) {
 #ifdef DEBUG
-    delay(200);
-
-    Serial.println("**** Enabling hotplug ****");
+        Serial.println("**** Monitor detected on hotplug pin, entering host mode ****");
 #endif
-
-    digitalWrite(hotPlugDetectPin, HIGH);
+        setupHost();
+        hostMode = true;
+    } else {
+        setupDisplay();
+        hostMode = false;
+    }
 }
 
 
@@ -62,4 +58,20 @@ void loop() {
 #endif
         }
     }
+
+#ifdef DEBUG
+    if (hostMode) {
+        int newState = digitalRead(hotPlugDetectPin);
+
+        // Signal on hotPlugDetectPin raised to +5v,
+        // read EDID data from monitor
+        if (hotplugDetected == LOW && newState == HIGH) {
+            Serial.println("**** Monitor detected, reading EDID data ****");
+            dumpEDID();
+            Serial.println("**** Done ****");
+        }
+
+        hotplugDetected = newState;
+    }
+#endif
 }

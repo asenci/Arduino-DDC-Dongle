@@ -35,7 +35,6 @@ bool processCommand(byte cmd) {
             Serial.println("* ERROR: INVALID UART COMMAND *");
 #endif
             return false;
-            break;
     }
     
     return true;
@@ -199,8 +198,6 @@ bool receiveEEPROM() {
                 return false;
         }
     }
-
-    return false;
 }
 
 bool sendEEPROM() {

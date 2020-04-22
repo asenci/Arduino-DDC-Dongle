@@ -56,7 +56,7 @@ bool xModemReadCmd(byte *data, unsigned long timeout) {
 }
 
 bool xModemReadCmd(byte *data, unsigned long timeout, int tries) {
-    int receivedBytes = 0;
+    int receivedBytes;
 
     Serial.setTimeout(timeout);
 

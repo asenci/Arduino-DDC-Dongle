@@ -1,5 +1,5 @@
-#ifndef ASCII
-#define ASCII
+#ifndef ASCII_H
+#define ASCII_H
 
 #include <Arduino.h>
 
@@ -10,4 +10,4 @@ const byte asciiNAK = 0x15;
 const byte asciiCAN = 0x18;
 const byte asciiSUB = 0x1A;
 
-#endif //DDC_DISPLAY_ASCII_H
+#endif //ASCII_H
