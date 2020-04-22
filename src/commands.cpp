@@ -205,7 +205,7 @@ bool receiveEEPROM() {
 
 bool sendEEPROM() {
     byte cmd;
-    byte blockSeq = 1;
+    byte blockSeq = 0;
 
     while (true) {
         if (!xModemReadCmd(&cmd, 60000)) {
@@ -233,7 +233,7 @@ bool sendEEPROM() {
                 return false;
 
             case asciiNAK:
-                if (blockSeq > 1) {
+                if (blockSeq > 0) {
 #ifdef DEBUG
                     Serial.println("* WARNING: XMODEM NAK RECEIVED, RETRANSMITING BLOCK *");
 #endif
@@ -256,8 +256,8 @@ bool sendEEPROM() {
 
         // Send data block
         Serial.write(asciiSOH);
-        Serial.write(blockSeq);
-        Serial.write(255-blockSeq);
+        Serial.write(blockSeq+1); // xmodem block sequence starts from 1
+        Serial.write(255-blockSeq-1);
 
         byte checksum = 0;
 
