@@ -1,8 +1,18 @@
+#include <Arduino.h>
 #include <EEPROM.h>
-#include "src/Wire128/src/Wire.h"
+#include <Wire128.h>
 
 // Enable debugging
 // #define DEBUG
+
+
+// Function definitions
+bool receiveEEPROM();
+bool xModemReadBlock(byte *data);
+bool xModemReadCmd(byte *data);
+void receiveEvent(int numBytes);
+void requestEvent();
+void xModemFlush();
 
 
 // Constants
@@ -87,17 +97,6 @@ void loop() {
                 Serial.println("**** Starting data transfer from UART to EEPROM ****");
 #endif
                 if (!receiveEEPROM()) {
-#ifdef DEBUG
-                    Serial.println("**** Data transfer failed ****");
-#endif
-                }
-                break;
-
-            case asciiNAK:
-#ifdef DEBUG
-                Serial.println("**** Starting data transfer from EEPROM to UART ****");
-#endif
-                if (!sendEEPROM()) {
 #ifdef DEBUG
                     Serial.println("**** Data transfer failed ****");
 #endif
@@ -381,7 +380,6 @@ bool receiveEEPROM() {
 
     return false;
 }
-
 
 bool xModemReadCmd(byte *data) {
     int receivedBytes = 0;
