@@ -1,40 +1,6 @@
 #include <ascii.h>
 #include <xmodem.h>
 
-bool xModemReadCmd(byte *data) {
-    int receivedBytes = 0;
-
-    Serial.setTimeout(10000);
-
-    for (int i = 0; i < 10; i++) {
-        // Wait for command
-        receivedBytes = Serial.readBytes(data, 1);
-
-        // Read successful
-        if (receivedBytes == 1) {
-            return true;
-        }
-
-        // Send NAK
-        Serial.write(asciiNAK);
-
-#ifdef DEBUG
-        Serial.println("* ERROR: XMODEM TRANSFER TIMED OUT *");
-#endif
-    }
-
-    return false;
-}
-
-bool xModemReadBlock(byte *data) {
-    Serial.setTimeout(1000);
-
-    // skip first byte (cmd)
-    int receivedBytes = Serial.readBytes(&data[1], xModemBlockSize - 1);
-
-    return receivedBytes == (xModemBlockSize - 1);
-}
-
 void xModemFlush() {
     byte devNull;
 
@@ -70,4 +36,49 @@ void xModemFlush() {
 #ifdef DEBUG
     Serial.println();
 #endif
+}
+
+bool xModemReadBlock(byte *data) {
+    Serial.setTimeout(1000);
+
+    // skip first byte (cmd)
+    int receivedBytes = Serial.readBytes(&data[1], xModemBlockSize - 1);
+
+    return receivedBytes == (xModemBlockSize - 1);
+}
+
+bool xModemReadCmd(byte *data) {
+    return xModemReadCmd(data, 10000);
+}
+
+bool xModemReadCmd(byte *data, unsigned long timeout) {
+    return xModemReadCmd(data, timeout, 1);
+}
+
+bool xModemReadCmd(byte *data, unsigned long timeout, int tries) {
+    int receivedBytes = 0;
+
+    Serial.setTimeout(timeout);
+
+    for (int i = 0; i < tries; i++) {
+        // Wait for command
+        receivedBytes = Serial.readBytes(data, 1);
+
+        if (receivedBytes == 1) {
+            return true;
+        }
+
+#ifdef DEBUG
+        Serial.println("* ERROR: XMODEM TIMEOUT *");
+#endif
+        if (tries > 1) {
+            // Send NAK
+            Serial.write(asciiNAK);
+        }
+    }
+
+#ifdef DEBUG
+    Serial.println("* ERROR: XMODEM TIMED OUT WAITING FOR CMD *");
+#endif
+    return false;
 }

@@ -3,7 +3,7 @@
 
 #include <Arduino.h>
 
-const int xModemBlockSize = 132; // CMD byte is read in a separate routine
+const int xModemBlockSize = 132;
 const int xModemBlockCmdPos = 0;
 const int xModemBlockSeqPos = 1;
 const int xModemBlockRevSeqPos = 2;
@@ -17,5 +17,9 @@ void xModemFlush();
 bool xModemReadBlock(byte *data);
 
 bool xModemReadCmd(byte *data);
+
+bool xModemReadCmd(byte *, unsigned long timeout);
+
+bool xModemReadCmd(byte *, unsigned long timeout, int tries);
 
 #endif //XMODEM

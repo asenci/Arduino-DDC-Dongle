@@ -51,11 +51,10 @@ bool receiveEEPROM() {
     Serial.write(asciiNAK);
 
     while (true) {
-        if (!xModemReadCmd(&cmd)) {
+        if (!xModemReadCmd(&cmd, 10000, 10)) {
 #ifdef DEBUG
             Serial.println("* ERROR: XMODEM TRANSFER ABORTED AFTER 10 TIMEOUTS *");
 #endif
-
             return false;
         }
 
@@ -196,7 +195,8 @@ bool receiveEEPROM() {
 #ifdef DEBUG
                 Serial.println("* ERROR: INVALID XMODEM COMMAND *");
 #endif
-                break;
+                Serial.write(asciiCAN);
+                return false;
         }
     }
 
@@ -204,5 +204,75 @@ bool receiveEEPROM() {
 }
 
 bool sendEEPROM() {
-    return true;
+    byte cmd;
+    byte blockSeq = 1;
+
+    while (true) {
+        if (!xModemReadCmd(&cmd, 60000)) {
+#ifdef DEBUG
+            Serial.println("* ERROR: XMODEM TRANSFER TIMED OUT *");
+#endif
+            return false;
+        }
+
+        switch (cmd) {
+            case asciiACK:
+                if (blockSeq * xModemBlockPayloadSize >= (int)EEPROM.length()) {
+                    // Receiver acknowledged EOT, transfer completed
+                    return true;
+                }
+
+                // Send next block
+                blockSeq++;
+                break;
+
+            case asciiCAN:
+#ifdef DEBUG
+                Serial.println("* ERROR: XMODEM TRANSFER CANCELLED BY RECEIVER *");
+#endif
+                return false;
+
+            case asciiNAK:
+                if (blockSeq > 1) {
+#ifdef DEBUG
+                    Serial.println("* WARNING: XMODEM NAK RECEIVED, RETRANSMITING BLOCK *");
+#endif
+                }
+                break;
+
+            default:
+#ifdef DEBUG
+                Serial.println("* ERROR: INVALID XMODEM COMMAND, ABORTING TRANSFER *");
+#endif
+                Serial.write(asciiCAN);
+                return false;
+        }
+
+        if (blockSeq * xModemBlockPayloadSize >= (int)EEPROM.length()) {
+            // Last block has been sent, sending EOT and waiting for ACK
+            Serial.write(asciiEOT);
+            continue;
+        }
+
+        // Send data block
+        Serial.write(asciiSOH);
+        Serial.write(blockSeq);
+        Serial.write(255-blockSeq);
+
+        byte checksum = 0;
+
+        for (int i = 0; i < xModemBlockPayloadSize; i++) {
+            byte b = asciiSUB;
+
+            int idx = (blockSeq * xModemBlockPayloadSize) + i;
+            if (idx < (int) EEPROM.length()) {
+                b = EEPROM[idx];
+            }
+
+            Serial.write(b);
+            checksum += b;
+        }
+
+        Serial.write(checksum);
+    }
 }

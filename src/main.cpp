@@ -3,9 +3,6 @@
 #include <ddc.h>
 #include <Wire128.h>
 
-// Enable debugging
-//#define DEBUG
-
 
 // Constants
 const int hotPlugDetectPin = 7;
@@ -60,7 +57,9 @@ void loop() {
         Serial.println(" ****");
 #endif
         if (!processCommand(cmd)) {
+#ifdef DEBUG
             Serial.println("**** Failed to execute command ****");
+#endif
         }
     }
 }
