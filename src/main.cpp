@@ -1,80 +1,77 @@
 #include <Arduino.h>
-#include <commands.h>
 #include <ddc.h>
+#include <debug.h>
 #include <pins.h>
-#include <setup.h>
-
-
-// Variables
-bool hostMode;
-int hotplugDetected = LOW;
+#include <Wire128.h>
+#include <xmodem.h>
 
 
 // cppcheck-suppress unusedFunction
 void setup() {
-    // Use hotplugPin for hotplug detection
-    // Monitor must pull-up to a +5v reference to signal presence to the host
-    // requires a external pull-down resistor for stable detection
-    pinMode(hotPlugDetectPin, INPUT);
-    digitalWrite(hotPlugDetectPin, LOW);
+    // Initialise software serial for debugging
+    SerialDebug.begin(9600);
+    SerialDebug.println(F("**** Starting up ****"));
 
-    Serial.begin(9600);
+    // Use vccDetectPin for host VCC detection
+    pinMode(vccDetectPin, INPUT);
+    digitalWrite(vccDetectPin, LOW);
 
-#ifdef DEBUG
-    // Wait for serial interface to be ready
-    while (!Serial) {}
+    // Use vccEnablePin for sink power supply
+    // Host must provide a +5v power source before the sink can advertise hot plug
+    pinMode(vccEnablePin, OUTPUT);
+    digitalWrite(vccEnablePin, LOW);
 
-    Serial.println(F("**** Ready ****"));
+    // Enter host mode if host Vcc is not detected
+    if (digitalRead(vccDetectPin) == LOW) {
+        SerialDebug.println(F("**** Host power not detected, entering host mode ****"));
 
-    // Use built-in LED for status
-    pinMode(LED_BUILTIN, OUTPUT);
-    digitalWrite(LED_BUILTIN, LOW);
-#endif
+        // Use hotPlugDetectPin for hotplug detection
+        // Sink must pull-up to a +5v reference to signal presence to the host
+        pinMode(hotPlugPin, INPUT);
+        digitalWrite(hotPlugPin, LOW);
 
-    delay(20);
-    // Enter host mode if monitor detected
-    if (digitalRead(hotPlugDetectPin) == HIGH) {
-#ifdef DEBUG
-        Serial.println(F("**** Monitor detected on hotplug pin, entering host mode ****"));
-#endif
-        setupHost();
-        hostMode = true;
+        // Register as i2c master
+        Wire.begin();
+
+        // Register hot plug detection interrupt
+        attachInterrupt(digitalPinToInterrupt(hotPlugPin), dumpEDID, RISING);
+
+        // Present power to sink
+        SerialDebug.println(F("**** Presenting power to sink ****"));
+        digitalWrite(vccEnablePin, HIGH);
+
+        // DDC specifies sink must be ready to reply to host within 20ms
+        delay(20);
+
     } else {
-        setupDisplay();
-        hostMode = false;
+        SerialDebug.println(F("**** Host power detected, entering sink mode ****"));
+
+        // Use hotPlugPin for hot plug advertisement
+        // Sink must pull-up to a +5v reference to signal presence to the host
+        pinMode(hotPlugPin, OUTPUT);
+        digitalWrite(hotPlugPin, LOW);
+
+        // Register as i2c slave
+        Wire.begin(ddcPriAddress);
+
+        // Disable SDA/SCL pull-up
+        // DDC specifies sink must pull-up SCL to a +5v reference using a 47k ohm resistor
+        digitalWrite(SDA, LOW);
+        digitalWrite(SCL, LOW);
+
+        Wire.onReceive(receiveDdcCommand);
+        Wire.onRequest(sendDdcData);
+
+        SerialDebug.println(F("**** Advertising hot plug ****"));
+        digitalWrite(hotPlugPin, HIGH);
     }
+
+    // Initialise hardware serial for xModem transfer
+    Serial.begin(9600);
 }
 
 
 // cppcheck-suppress unusedFunction
 void loop() {
-    while (Serial.available()) {
-        byte cmd = Serial.read();
-#ifdef DEBUG
-        Serial.print(F("**** Received command from UART: 0x"));
-        Serial.print(cmd, HEX);
-        Serial.println(F(" ****"));
-#endif
-        if (!processCommand(cmd)) {
-#ifdef DEBUG
-            Serial.println(F("**** Failed to execute command ****"));
-#endif
-        }
-    }
-
-#ifdef DEBUG
-    if (hostMode) {
-        int newState = digitalRead(hotPlugDetectPin);
-
-        // Signal on hotPlugDetectPin raised to +5v,
-        // read EDID data from monitor
-        if (hotplugDetected == LOW && newState == HIGH) {
-            Serial.println(F("**** Monitor detected, reading EDID data ****"));
-            dumpEDID();
-            Serial.println(F("**** Done ****"));
-        }
-
-        hotplugDetected = newState;
-    }
-#endif
+    xModemMainLoop();
 }

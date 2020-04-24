@@ -12,10 +12,7 @@ void receiveDdcCommand(int numBytes);
 void sendDdcData();
 
 void dumpEDID();
-bool readAtOffset(byte *data, int dataSize);
-bool readAtOffset(byte *data, int dataSize, int offset);
-bool readAtOffset(byte *data, int dataSize, int offset, int i2cAddress);
-bool hexDump(byte *data, int dataSize);
-bool verifyCheckSum(byte *data, int dataSize);
+bool readEdidAtOffset(byte *data, int dataSize, int offset=0, int i2cAddress=ddcPriAddress);
+bool verifyEdidCheckSum(byte *data, int dataSize);
 
 #endif //DDC_H

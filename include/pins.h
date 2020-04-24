@@ -3,7 +3,11 @@
 
 #include <Arduino.h>
 
-const int hotPlugDetectPin = 7;
+const int debugRxPin = 10;
+const int debugTxPin = 9;
+const int hotPlugPin = 8;
+const int vccDetectPin = 7;
+const int vccEnablePin = 6;
 
 #ifndef LED_BUILTIN
 #define LED_BUILTIN 13
