@@ -2,7 +2,7 @@
 #include <ddc.h>
 #include <debug.h>
 #include <pins.h>
-#include <Wire128.h>
+#include <Wire.h>
 #include <xmodem.h>
 
 
@@ -52,7 +52,8 @@ void setup() {
         digitalWrite(hotPlugPin, LOW);
 
         // Register as i2c slave
-        Wire.begin(ddcPriAddress);
+        Wire.begin(ddcAllAddresses);
+        TWAMR = ddcAllAddressesMask << 1u;
 
         // Disable SDA/SCL pull-up
         // DDC specifies sink must pull-up SCL to a +5v reference using a 47k ohm resistor
@@ -60,7 +61,7 @@ void setup() {
         digitalWrite(SCL, LOW);
 
         Wire.onReceive(receiveDdcCommand);
-        Wire.onRequest(sendDdcData);
+        Wire.onRequest(receiveDdcReadRequest);
 
         SerialDebug.println(F("**** Advertising hot plug ****"));
         digitalWrite(hotPlugPin, HIGH);
