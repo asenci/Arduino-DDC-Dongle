@@ -3,29 +3,21 @@
 
 #include <Arduino.h>
 
-#ifndef NODEBUG
-#define XMODEM_DEFAULT_NAK_INTERVAL 1000
-#else //NODEBUG
+#ifndef XMODEM_DEFAULT_NAK_INTERVAL
 #define XMODEM_DEFAULT_NAK_INTERVAL 10000
-#endif //NODEBUG
+#endif //XMODEM_DEFAULT_NAK_INTERVAL
 
-const int xModemBlockSize = 132;
-const int xModemBlockCmdPos = 0;
-const int xModemBlockSeqPos = 1;
-const int xModemBlockRevSeqPos = 2;
-const int xModemBlockPayloadPos = 3;
 const int xModemBlockPayloadSize = 128;
-const int xModemBlockChecksumPos = xModemBlockSize - 1;
 
 bool xModemDownload();
 
-void xModemFlush();
+void xModemMainLoop(unsigned long nakInternal = XMODEM_DEFAULT_NAK_INTERVAL);
 
-void xModemMainLoop(long nakInternal = XMODEM_DEFAULT_NAK_INTERVAL);
+int xModemReadBlock(uint8_t *buffer, uint8_t expectedBlockSeq = 1);
 
-bool xModemReadBlock(byte *data);
+bool xModemReadByte(uint8_t *buffer, size_t length = 1, unsigned long timeout = 1000, int tries = 1, bool nak = false);
 
-bool xModemReadCmd(byte *data, unsigned long timeout = 10000, int tries = 1, bool nak = false);
+void xModemSendBlock(uint8_t *buffer, uint8_t blockSeq = 1);
 
 bool xModemUpload();
 

@@ -10,7 +10,7 @@
 void setup() {
     // Initialise software serial for debugging
     SerialDebug.begin(9600);
-    SerialDebug.println(F("**** Starting up ****"));
+    SerialDebug.println(F("***** Booting up *****"));
 
     // Use vccDetectPin for host VCC detection
     pinMode(vccDetectPin, INPUT);

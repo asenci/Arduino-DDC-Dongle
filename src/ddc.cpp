@@ -24,7 +24,7 @@ void receiveDdcCommand(int numBytes) {
     hexDump(cmd, numBytes);
 
     if (numBytes != 1) {
-        SerialDebug.println("* ERROR: INVALID DDC COMMAND *");
+        SerialDebug.println(F("* ERROR: INVALID DDC COMMAND *"));
         return;
     }
 
