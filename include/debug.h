@@ -6,7 +6,8 @@
 #ifndef NODEBUG
 
 #include <Arduino.h>
-#include <SoftwareSerial.h>
+
+#define SerialDebug Serial1
 
 void dumpByte(uint8_t b);
 
@@ -14,7 +15,6 @@ void hexDump(const __FlashStringHelper *name, uint8_t *data, int length = 1, int
 
 void hexDump(uint8_t *data, int length = 1, int indent = 0);
 
-extern SoftwareSerial SerialDebug;
 
 #else //NODEBUG
 #define dumpByte(x)

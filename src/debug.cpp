@@ -1,10 +1,4 @@
 #include <debug.h>
-#include <pins.h>
-#include <SoftwareSerial.h>
-
-// Initialize software serial port for debugging
-SoftwareSerial SerialDebug(debugRxPin, debugTxPin);
-
 
 void dumpByte(uint8_t b) {
     if (b < 0x10) {
