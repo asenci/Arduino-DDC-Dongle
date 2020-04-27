@@ -51,21 +51,13 @@ void setup() {
         pinMode(HOT_PLUG, OUTPUT);
         digitalWrite(HOT_PLUG, LOW);
 
-        // Register as i2c slave
-        Wire.begin(ddcAllAddresses);
-        TWAMR = ddcAllAddressesMask << 1u;
-
-        // Disable SDA/SCL pull-up
-        // DDC specifies sink must pull-up SCL to a +5v reference using a 47k ohm resistor
-        digitalWrite(SDA, LOW);
-        digitalWrite(SCL, LOW);
-
-        Wire.onReceive(receiveDdcCommand);
-        Wire.onRequest(receiveDdcReadRequest);
 
         SerialDebug.println(F("**** Advertising hot plug ****"));
         digitalWrite(HOT_PLUG, HIGH);
     }
+
+    // Initialise DDC sink
+    ddcSetup();
 
     // Initialise hardware serial for xModem transfer
     Serial.begin(9600);

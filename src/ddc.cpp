@@ -3,52 +3,55 @@
 #include <EEPROM.h>
 #include <Wire.h>
 
-
 // Variables
 volatile uint8_t ddcSegmentPointer = 0;
 volatile uint8_t ddcPriWordOffset = 0;
 volatile uint8_t ddcSecWordOffset = 0;
 
+uint8_t ddcPriMem[DDC_MEM_LENGTH];
+size_t ddcPriMemUsed;
+uint8_t ddcSecMem[DDC_MEM_LENGTH];
+size_t ddcSecMemUsed;
 
-void dumpEDID() {
-    uint8_t rxBuffer[edidUnitSize];
+void ddcDumpEdid() {
+    uint8_t rxBuffer[DDC_EDID_LENGTH];
 
     SerialDebug.println(F("*** Reading sink primary EDID data ***"));
 
     // Read primary EDID data
-    if (!requestEdidAtOffset(rxBuffer, edidUnitSize)) {
+    if (!ddcRequestEdid(rxBuffer, DDC_EDID_LENGTH)) {
         SerialDebug.println(F("*** Error reading EDID data ***"));
         return;
     }
 
-    hexDump(rxBuffer, edidUnitSize);
+    hexDump(rxBuffer, DDC_EDID_LENGTH);
 
-    if (!verifyEdidCheckSum(rxBuffer, edidUnitSize)) {
+    if (!ddcVerifyChecksum(rxBuffer, DDC_EDID_LENGTH)) {
         SerialDebug.println(F("*** Invalid checksum for sink primary EDID data ***"));
         return;
     }
 
-    int numExtensions = rxBuffer[edidExtCountPos];
+    uint8_t numExtensions = rxBuffer[DDC_EDID_EXTEN_COUNT_POS];
     SerialDebug.print(F("*** EDID has "));
     SerialDebug.print(numExtensions, DEC);
     SerialDebug.println(F(" extensions ***"));
 
-    for (int i = 1; i <= numExtensions; i++) {
+    for (uint8_t i = 1; i <= numExtensions; i++) {
         SerialDebug.print(F("*** Reading EDID extension "));
         SerialDebug.print(i, DEC);
         SerialDebug.println(F(" ***"));
 
-        int offset = i * edidUnitSize;
-        if (!requestEdidAtOffset(rxBuffer, edidUnitSize, offset)) {
+        uint16_t offset = i * DDC_EDID_LENGTH;
+        if (!ddcRequestEdid(rxBuffer, DDC_EDID_LENGTH, offset)) {
             SerialDebug.println(F("*** Error reading EDID extension "));
             SerialDebug.print(i, DEC);
             SerialDebug.println(F(" ***"));
             continue;
         }
 
-        hexDump(rxBuffer, edidUnitSize);
+        hexDump(rxBuffer, DDC_EDID_LENGTH);
 
-        if (!verifyEdidCheckSum(&rxBuffer[offset], edidUnitSize)) {
+        if (!ddcVerifyChecksum(&rxBuffer[offset], DDC_EDID_LENGTH)) {
             SerialDebug.print(F("*** Invalid checksum for EDID extension "));
             SerialDebug.print(i, DEC);
             SerialDebug.println(F(" ***"));
@@ -57,40 +60,24 @@ void dumpEDID() {
     }
 }
 
-bool readDdcData(uint8_t *buffer, uint8_t address) {
-    int eepromOffset = 0;
+size_t ddcLoadEeprom(uint8_t *buffer, uint16_t offset) {
+    uint16_t length;
+    EEPROM.get(offset, length);
+    offset += 2; // skip first two bytes (length)
 
-    switch (address >> 1u) {
-        case ddcPriAddress:
-            SerialDebug.print(F("Word offset: 0x"));
-            SerialDebug.println(ddcPriWordOffset, HEX);
-            eepromOffset = (2 * edidUnitSize * ddcSegmentPointer) + ddcPriWordOffset;
-            break;
-        case ddcSecAddress:
-            SerialDebug.print(F("Word offset: 0x"));
-            SerialDebug.println(ddcSecWordOffset, HEX);
-            eepromOffset = 0x200 + (2 * edidUnitSize * ddcSegmentPointer) + ddcSecWordOffset;
-            break;
-        default:
-            SerialDebug.println(F("** Invalid DDC address **"));
-            return false;
+    // Limit the length to the reserved EEPROM size (-2 bytes for length)
+    if (length > (DDC_MEM_LENGTH - 2)) {
+        length = (DDC_MEM_LENGTH - 2);
     }
 
-    SerialDebug.print(F("Segment pointer: 0x"));
-    SerialDebug.println(ddcSegmentPointer, HEX);
-
-    SerialDebug.print(F("EEPROM offset: 0x"));
-    SerialDebug.println(eepromOffset, HEX);
-
-    for (int i = 0; i < edidUnitSize; i++) {
-        buffer[i] = EEPROM.read(eepromOffset + i);
+    for (uint16_t i = 0; i < length; i++) {
+        buffer[i] = EEPROM.read(offset + i);
     }
 
-    hexDump(buffer, edidUnitSize);
-    return true;
+    return length;
 }
 
-bool requestEdidAtOffset(uint8_t *data, int dataSize, int offset, int i2cAddress) {
+bool ddcRequestEdid(uint8_t *data, uint8_t dataSize, uint16_t offset, uint8_t i2cAddress) {
     SerialDebug.print(F("*** Reading "));
     SerialDebug.print(dataSize, DEC);
     SerialDebug.print(F(" bytes from address 0x"));
@@ -105,9 +92,9 @@ bool requestEdidAtOffset(uint8_t *data, int dataSize, int offset, int i2cAddress
     Wire.endTransmission();
 
     // Read EDID data
-    for (int i = 0; i < dataSize; i++) {
-        if (i % edidUnitSize == 0) {
-            Wire.requestFrom(i2cAddress, edidUnitSize);
+    for (uint8_t i = 0; i < dataSize; i++) {
+        if (i % DDC_EDID_LENGTH == 0) {
+            Wire.requestFrom(i2cAddress, DDC_EDID_LENGTH);
         }
 
         if (Wire.available() < 1) {
@@ -126,7 +113,7 @@ bool requestEdidAtOffset(uint8_t *data, int dataSize, int offset, int i2cAddress
     return true;
 }
 
-void receiveDdcCommand(int length) {
+void ddcReceiveCommand(int length) {
     uint8_t address = TWDR;
     SerialDebug.print(F("**** Processing DDC command on address 0x"));
     SerialDebug.print(address, HEX);
@@ -139,14 +126,14 @@ void receiveDdcCommand(int length) {
     hexDump(F("Command"), cmd, length);
 
     switch (address >> 1u) {
-        case ddcPriAddress:
-        case ddcSecAddress:
-        case ddcSpAddress:
+        case DDC_I2C_PRI_ADDR:
+        case DDC_I2C_SEC_ADDR:
+        case DDC_I2C_SP_ADDR:
             if (length != 1) {
                 SerialDebug.print(F("**** Error: Invalid DDC command ****"));
                 return;
             }
-            setDdcOffset(address, cmd[0]);
+            ddcSetOffset(address, cmd[0]);
             break;
 
         default:
@@ -155,59 +142,80 @@ void receiveDdcCommand(int length) {
     }
 }
 
-void receiveDdcReadRequest() {
+void ddcReadRequest() {
     uint8_t address = TWDR;
+    uint8_t *buffer;
+    uint8_t wordOffset;
+    size_t memUsed;
 
     switch (address >> 1u) {
-        case ddcPriAddress:
-            SerialDebug.println(F("*** Primary DDC address received read request ***"));
+        case DDC_I2C_PRI_ADDR:
+            SerialDebug.println(F("**** Primary DDC address received read request ****"));
+            buffer = ddcPriMem;
+            memUsed = ddcPriMemUsed;
+            wordOffset = ddcPriWordOffset;
             break;
-        case ddcSecAddress:
-            SerialDebug.println(F("*** Secondary DDC address received read request ***"));
+
+        case DDC_I2C_SEC_ADDR:
+            SerialDebug.println(F("**** Secondary DDC address received read request ****"));
+            buffer = ddcSecMem;
+            memUsed = ddcSecMemUsed;
+            wordOffset = ddcSecWordOffset;
             break;
+
         default:
-            SerialDebug.println(F("*** Invalid DDC address ***"));
+            SerialDebug.println(F("**** Invalid DDC address ****"));
             return;
     }
 
-    SerialDebug.println(F("*** Retrieving data from EEPROM ***"));
-    uint8_t ddcData[edidUnitSize];
-    if (!readDdcData(ddcData, address)) {
-        SerialDebug.println(F("*** Failed to retrieve data from EEPROM ***"));
+    SerialDebug.print(F("Word offset: 0x"));
+    SerialDebug.println(wordOffset, HEX);
+
+    SerialDebug.print(F("Segment pointer: 0x"));
+    SerialDebug.println(ddcSegmentPointer, HEX);
+
+    uint16_t totalOffset = wordOffset + (2 * DDC_EDID_LENGTH * ddcSegmentPointer);
+    if (totalOffset > memUsed) {
+        SerialDebug.println(F("**** Invalid memory position ****"));
         return;
     }
 
-    SerialDebug.println(F("*** Sending data to DDC host ***"));
-    int bytesSent = 0;
-
-    while (bytesSent < edidUnitSize) {
-        int i = Wire.write(&ddcData[bytesSent], (edidUnitSize - bytesSent));
-
-        SerialDebug.print(F("** Sent "));
-        SerialDebug.print(i);
-        SerialDebug.println(F(" bytes to DDC host **"));
-        bytesSent += i;
+    uint16_t length = memUsed - totalOffset;
+    if (length > DDC_EDID_LENGTH) {
+        length = DDC_EDID_LENGTH;
     }
-    SerialDebug.println(F("*** Transfer complete ***"));
+
+    buffer = &buffer[totalOffset];
+    hexDump(buffer, length);
+
+    SerialDebug.println(F("**** Sending data to DDC host ****"));
+    if (length > DDC_EDID_LENGTH) {
+        length = DDC_EDID_LENGTH;
+    }
+    uint8_t bytesSent = Wire.write(buffer, length);
+
+    SerialDebug.print(F("**** Sent "));
+    SerialDebug.print(bytesSent);
+    SerialDebug.println(F(" bytes to DDC host ****"));
 
     // Reset segment pointer
     ddcSegmentPointer = 0;
 
-    // Flip word offset counter
+    // Increment word offset
     switch (address >> 1u) {
-        case ddcPriAddress:
-            ddcPriWordOffset += 0x80;
+        case DDC_I2C_PRI_ADDR:
+            ddcPriWordOffset += bytesSent;
             break;
-        case ddcSecAddress:
-            ddcSecWordOffset += 0x80;
+        case DDC_I2C_SEC_ADDR:
+            ddcSecWordOffset += bytesSent;
             break;
     }
 }
 
-bool setDdcOffset(uint8_t address, uint8_t offset) {
+bool ddcSetOffset(uint8_t address, uint8_t offset) {
     switch (address >> 1u) {
-        case ddcPriAddress:
-        case ddcSecAddress:
+        case DDC_I2C_PRI_ADDR:
+        case DDC_I2C_SEC_ADDR:
             if (offset != 0x00 && offset != 0x80) {
                 SerialDebug.print(F("*** Invalid DDC word offset: 0x"));
                 SerialDebug.print(offset, HEX);
@@ -216,7 +224,7 @@ bool setDdcOffset(uint8_t address, uint8_t offset) {
             }
             break;
 
-        case ddcSpAddress:
+        case DDC_I2C_SP_ADDR:
             if (offset > 0x7F) {
                 SerialDebug.print(F("*** Invalid DDC segment pointer: 0x"));
                 SerialDebug.print(offset, HEX);
@@ -231,19 +239,19 @@ bool setDdcOffset(uint8_t address, uint8_t offset) {
     }
 
     switch (address >> 1u) {
-        case ddcPriAddress:
+        case DDC_I2C_PRI_ADDR:
             ddcPriWordOffset = offset;
             SerialDebug.print(F("*** Primary DDC word offset set to 0x"));
             SerialDebug.print(offset, HEX);
             SerialDebug.print(F(" ***"));
             break;
-        case ddcSecAddress:
+        case DDC_I2C_SEC_ADDR:
             ddcSecWordOffset = offset;
             SerialDebug.print(F("*** Secondary DDC word offset set to 0x"));
             SerialDebug.print(offset, HEX);
             SerialDebug.print(F(" ***"));
             break;
-        case ddcSpAddress:
+        case DDC_I2C_SP_ADDR:
             ddcSegmentPointer = offset;
             SerialDebug.print(F("*** DDC segment pointer set to 0x"));
             SerialDebug.print(offset, HEX);
@@ -254,12 +262,37 @@ bool setDdcOffset(uint8_t address, uint8_t offset) {
     return true;
 }
 
-bool verifyEdidCheckSum(uint8_t *data, int dataSize) {
-    uint8_t checkSum = 0;
+void ddcSetup() {
+    // Load EEPROM data
+    SerialDebug.println(F("**** Loading DDC primary address data from EEPROM ****"));
+    ddcPriMemUsed = ddcLoadEeprom(ddcPriMem);
+    hexDump(ddcPriMem, ddcPriMemUsed);
 
-    for (int i = 0; i < dataSize; i++) {
-        checkSum += data[i];
+    SerialDebug.println(F("**** Loading DDC secondary address data from EEPROM ****"));
+    ddcSecMemUsed = ddcLoadEeprom(ddcSecMem, DDC_MEM_LENGTH);
+    hexDump(ddcSecMem, ddcSecMemUsed);
+
+    // Register as I2C slave
+    SerialDebug.println(F("**** Registering as DDC sink ****"));
+    Wire.begin(DDC_I2C_ALL_ADDR);
+    TWAMR = DDC_I2C_ALL_MASK << 1u;
+
+    // Disable SDA/SCL internal pull-up
+    // DDC specifies host must pull-up SDA and SCL,
+    // and sink must pull-up SCL  using a 47k ohm resistor
+    digitalWrite(SDA, LOW);
+    digitalWrite(SCL, LOW);
+
+    Wire.onReceive(ddcReceiveCommand);
+    Wire.onRequest(ddcReadRequest);
+}
+
+bool ddcVerifyChecksum(uint8_t *data, uint8_t dataSize) {
+    uint8_t checksum = 0;
+
+    for (uint8_t i = 0; i < dataSize; i++) {
+        checksum += data[i];
     }
 
-    return checkSum == 0;
+    return checksum == 0;
 }
