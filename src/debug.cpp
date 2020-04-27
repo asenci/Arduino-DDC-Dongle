@@ -1,5 +1,7 @@
 #include <debug.h>
 
+#ifndef NODEBUG
+
 void dumpByte(uint8_t b) {
     if (b < 0x10) {
         SerialDebug.print(F("0"));
@@ -47,3 +49,5 @@ void hexDump(const __FlashStringHelper *name, uint8_t *data, uint16_t length, ui
     }
 
 }
+
+#endif

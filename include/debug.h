@@ -17,8 +17,8 @@ void hexDump(uint8_t *data, uint16_t length = 1, uint8_t indent = 0);
 
 
 #else //NODEBUG
-#define dumpByte(x)
-#define hexDump(x, y, z)
+#define dumpByte(...)
+#define hexDump(...)
 #define SerialDebug if(0)Serial1
 
 #endif //NODEBUG
