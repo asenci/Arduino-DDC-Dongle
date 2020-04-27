@@ -23,7 +23,10 @@ void hexDump(uint8_t *data, uint16_t length, uint8_t indent) {
 
         dumpByte(data[i]);
     }
-    SerialDebug.println();
+
+    if (length > 0) {
+        SerialDebug.println();
+    }
 }
 
 void hexDump(const __FlashStringHelper *name, uint8_t *data, uint16_t length, uint8_t indent) {

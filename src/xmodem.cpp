@@ -75,7 +75,8 @@ void xModemMainLoop(unsigned long nakInterval) {
                 if (!xModemDownload()) {
                     SerialDebug.println(F("**** Download failed ****"));
                 } else {
-                    SerialDebug.println(F("**** Download completed ****"));
+                    SerialDebug.println(F("**** Download completed, resetting ****"));
+                    WDTCSR = 0x18u;
                 }
                 break;
 
@@ -270,7 +271,6 @@ bool xModemUpload() {
         }
 
         uint16_t eepromOffset = (blockSeq - 1) * XMODEM_PAYLOAD_LENGTH;
-
         if (eepromOffset >= EEPROM.length()) {
             // Last block has been sent, sending EOT and waiting for ACK
             SerialDebug.println(F("*** Last data block sent, sending EOT ***"));
@@ -282,8 +282,15 @@ bool xModemUpload() {
         SerialDebug.println(F("*** Reading payload from EEPROM ***"));
         uint8_t blockPayload[XMODEM_PAYLOAD_LENGTH];
         EEPROM.get(eepromOffset, blockPayload);
+        hexDump(blockPayload, XMODEM_PAYLOAD_LENGTH);
 
-        uint8_t paddingRequired = (eepromOffset + XMODEM_PAYLOAD_LENGTH) - EEPROM.length();
+
+        uint16_t payloadLength = EEPROM.length() - eepromOffset;
+        if (payloadLength > XMODEM_PAYLOAD_LENGTH) {
+            payloadLength = XMODEM_PAYLOAD_LENGTH;
+        }
+
+        uint8_t paddingRequired = XMODEM_PAYLOAD_LENGTH - payloadLength;
         if (paddingRequired > 0) {
             SerialDebug.print(F("*** Padding data block with "));
             SerialDebug.print(paddingRequired, DEC);
