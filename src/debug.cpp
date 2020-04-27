@@ -8,13 +8,13 @@ void dumpByte(uint8_t b) {
     SerialDebug.print(b, HEX);
 }
 
-void hexDump(uint8_t *data, int length, int indent) {
-    for (int i = 0; i < length; i++) {
+void hexDump(uint8_t *data, uint16_t length, uint8_t indent) {
+    for (uint16_t i = 0; i < length; i++) {
         if (i % 16 == 0) {
             if (i > 0) {
                 SerialDebug.println();
             }
-            for (int j = 0; j < indent; j++) {
+            for (uint8_t j = 0; j < indent; j++) {
                 SerialDebug.print(F(" "));
             }
         } else {
@@ -26,8 +26,8 @@ void hexDump(uint8_t *data, int length, int indent) {
     SerialDebug.println();
 }
 
-void hexDump(const __FlashStringHelper *name, uint8_t *data, int length, int indent) {
-    for (int i = 0; i < indent; i++) {
+void hexDump(const __FlashStringHelper *name, uint8_t *data, uint16_t length, uint8_t indent) {
+    for (uint8_t i = 0; i < indent; i++) {
         SerialDebug.print(" ");
     }
     SerialDebug.print(name);

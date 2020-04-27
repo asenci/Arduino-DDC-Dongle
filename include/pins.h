@@ -3,9 +3,9 @@
 
 #include <Arduino.h>
 
-const int hotPlugPin = 8;
-const int vccDetectPin = 7;
-const int vccEnablePin = 6;
+#define HOT_PLUG 8
+#define VCC_DETECT 7
+#define VCC_ENABLE 6
 
 #ifndef LED_BUILTIN
 #define LED_BUILTIN 13

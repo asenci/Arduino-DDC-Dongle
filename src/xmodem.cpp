@@ -18,39 +18,39 @@ bool xModemDownload() {
         }
 
         switch (cmd) {
-            case asciiCAN:
+            case CAN:
                 SerialDebug.println(F("*** Received CAN, aborting transfer ***"));
                 return false;
 
-            case asciiEOT:
+            case EOT:
                 SerialDebug.println(F("*** Received EOT, transfer completed, sending ACK ***"));
-                Serial.write(asciiACK);
+                Serial.write(ACK);
                 return true;
 
-            case asciiSOH: {
+            case SOH: {
                 SerialDebug.println(F("*** Received SOH, reading data block ***"));
-                uint8_t blockPayload[xModemBlockPayloadSize];
-                int result = xModemReadBlock(blockPayload, blockSeq);
+                uint8_t blockPayload[XMODEM_PAYLOAD_LENGTH];
+                uint8_t result = xModemReadBlock(blockPayload, blockSeq);
 
                 if (result < 0) {
                     SerialDebug.println(F("*** Invalid data block, sending NAK ***"));
-                    Serial.write(asciiNAK);
+                    Serial.write(NAK);
                     continue;
                 }
 
                 if (result == 0) {
                     SerialDebug.println(F("*** Retransmitted data block, sending ACK ***"));
-                    Serial.write(asciiACK);
+                    Serial.write(ACK);
                     continue;
                 }
 
                 // Block is valid and not re-transmission, write to EEPROM
                 SerialDebug.println(F("*** Valid data block, writing payload to EEPROM ***"));
-                int eepromOffset = (blockSeq - 1) * xModemBlockPayloadSize;
+                uint16_t eepromOffset = (blockSeq - 1) * XMODEM_PAYLOAD_LENGTH;
                 EEPROM.put(eepromOffset, blockPayload);
 
                 SerialDebug.println(F("*** Payload written to EEPROM, sending ACK ***"));
-                Serial.write(asciiACK);
+                Serial.write(ACK);
                 blockSeq += result;
                 break;
             }
@@ -59,7 +59,7 @@ bool xModemDownload() {
                 SerialDebug.print(F("*** Received invalid xModem command: 0x"));
                 SerialDebug.print(cmd, HEX);
                 SerialDebug.println(F(" , sending CAN ***"));
-                Serial.write(asciiCAN);
+                Serial.write(CAN);
                 return false;
         }
     }
@@ -70,7 +70,7 @@ void xModemMainLoop(unsigned long nakInterval) {
         uint8_t cmd = Serial.peek();
 
         switch (cmd) {
-            case asciiSOH:
+            case SOH:
                 SerialDebug.println(F("**** Starting xModem download ****"));
                 if (!xModemDownload()) {
                     SerialDebug.println(F("**** Download failed ****"));
@@ -79,7 +79,7 @@ void xModemMainLoop(unsigned long nakInterval) {
                 }
                 break;
 
-            case asciiNAK:
+            case NAK:
                 SerialDebug.println(F("**** Starting xModem upload ****"));
                 if (!xModemUpload()) {
                     SerialDebug.println(F("**** Upload failed ****"));
@@ -102,14 +102,14 @@ void xModemMainLoop(unsigned long nakInterval) {
     if (curMillis - lastNakSent > nakInterval) {
         if (Serial.availableForWrite()) {
             SerialDebug.println(F("**** Sending periodic NAK ****"));
-            Serial.write(asciiNAK);
+            Serial.write(NAK);
         }
 
         lastNakSent = curMillis;
     }
 }
 
-int xModemReadBlock(uint8_t *buffer, uint8_t expectedBlockSeq) {
+uint8_t xModemReadBlock(uint8_t *buffer, uint8_t expectedBlockSeq) {
     //      Each block of the transfer looks like:
     //            <SOH><blk #><255-blk #><--128 data bytes--><cksum>
     //      in which:
@@ -135,10 +135,10 @@ int xModemReadBlock(uint8_t *buffer, uint8_t expectedBlockSeq) {
     }
     hexDump(F("REV SEQ"), &blockRevSeq);
 
-    if (!xModemReadByte(buffer, xModemBlockPayloadSize)) {
+    if (!xModemReadByte(buffer, XMODEM_PAYLOAD_LENGTH)) {
         return -1;
     }
-    hexDump(F("PAYLOAD"), buffer, xModemBlockPayloadSize);
+    hexDump(F("PAYLOAD"), buffer, XMODEM_PAYLOAD_LENGTH);
 
     uint8_t blockChecksum;
     if (!xModemReadByte(&blockChecksum)) {
@@ -170,7 +170,7 @@ int xModemReadBlock(uint8_t *buffer, uint8_t expectedBlockSeq) {
     }
 
     uint8_t calcChecksum = 0;
-    for (int i = 0; i < xModemBlockPayloadSize; i++) {
+    for (uint8_t i = 0; i < XMODEM_PAYLOAD_LENGTH; i++) {
         calcChecksum += buffer[i];
     }
     if (calcChecksum != blockChecksum) {
@@ -183,10 +183,10 @@ int xModemReadBlock(uint8_t *buffer, uint8_t expectedBlockSeq) {
     return 1;
 }
 
-bool xModemReadByte(uint8_t *buffer, size_t length, unsigned long timeout, int tries, bool nak) {
+bool xModemReadByte(uint8_t *buffer, size_t length, unsigned long timeout, uint8_t tries, bool nak) {
     Serial.setTimeout(timeout);
 
-    for (int i = 0; i < tries; i++) {
+    for (uint8_t i = 0; i < tries; i++) {
         // Wait for command
         size_t receivedBytes = Serial.readBytes(buffer, length);
 
@@ -196,7 +196,7 @@ bool xModemReadByte(uint8_t *buffer, size_t length, unsigned long timeout, int t
 
         if (nak) {
             SerialDebug.println(F("** Timed out, sending NAK **"));
-            Serial.write(asciiNAK);
+            Serial.write(NAK);
         }
     }
 
@@ -205,7 +205,7 @@ bool xModemReadByte(uint8_t *buffer, size_t length, unsigned long timeout, int t
 
 void xModemSendBlock(uint8_t *buffer, uint8_t blockSeq) {
     SerialDebug.println(F("** Sending SOH **"));
-    Serial.write(asciiSOH);
+    Serial.write(SOH);
 
     hexDump(F("SEQ"), &blockSeq);
     Serial.write(blockSeq);
@@ -216,8 +216,8 @@ void xModemSendBlock(uint8_t *buffer, uint8_t blockSeq) {
 
     uint8_t checksum = 0;
 
-    hexDump(F("PAYLOAD"), buffer, xModemBlockPayloadSize);
-    for (int i = 0; i < xModemBlockPayloadSize; i++) {
+    hexDump(F("PAYLOAD"), buffer, XMODEM_PAYLOAD_LENGTH);
+    for (uint8_t i = 0; i < XMODEM_PAYLOAD_LENGTH; i++) {
         Serial.write(buffer[i]);
         checksum += buffer[i];
     }
@@ -238,7 +238,7 @@ bool xModemUpload() {
         }
 
         switch (cmd) {
-            case asciiACK:
+            case ACK:
                 if (eotSent) {
                     // Receiver acknowledged EOT, transfer completed
                     SerialDebug.println(F("*** Received ACK, transfer completed ***"));
@@ -249,11 +249,11 @@ bool xModemUpload() {
                 blockSeq++;
                 break;
 
-            case asciiCAN:
+            case CAN:
                 SerialDebug.println(F("*** Received CAN, aborting transfer ***"));
                 return false;
 
-            case asciiNAK:
+            case NAK:
                 if (blockSeq == 1) {
                     SerialDebug.println(F("*** Received initial NAK, starting transfer ***"));
                 } else {
@@ -265,32 +265,32 @@ bool xModemUpload() {
                 SerialDebug.print(F("*** Received invalid xModem command: 0x"));
                 SerialDebug.print(cmd, HEX);
                 SerialDebug.println(F(" , sending CAN ***"));
-                Serial.write(asciiCAN);
+                Serial.write(CAN);
                 return false;
         }
 
-        int eepromOffset = (blockSeq - 1) * xModemBlockPayloadSize;
+        uint16_t eepromOffset = (blockSeq - 1) * XMODEM_PAYLOAD_LENGTH;
 
-        if (eepromOffset >= (int) EEPROM.length()) {
+        if (eepromOffset >= EEPROM.length()) {
             // Last block has been sent, sending EOT and waiting for ACK
             SerialDebug.println(F("*** Last data block sent, sending EOT ***"));
-            Serial.write(asciiEOT);
+            Serial.write(EOT);
             eotSent = true;
             continue;
         }
 
         SerialDebug.println(F("*** Reading payload from EEPROM ***"));
-        uint8_t blockPayload[xModemBlockPayloadSize];
+        uint8_t blockPayload[XMODEM_PAYLOAD_LENGTH];
         EEPROM.get(eepromOffset, blockPayload);
 
-        int paddingRequired = (eepromOffset + xModemBlockPayloadSize) - (int) EEPROM.length();
+        uint8_t paddingRequired = (eepromOffset + XMODEM_PAYLOAD_LENGTH) - EEPROM.length();
         if (paddingRequired > 0) {
             SerialDebug.print(F("*** Padding data block with "));
             SerialDebug.print(paddingRequired, DEC);
             SerialDebug.println(F(" bytes of SUB ***"));
         }
-        for (int i = 0; i < paddingRequired; i++) {
-            blockPayload[xModemBlockPayloadSize - i] = asciiSUB;
+        for (uint8_t i = 0; i < paddingRequired; i++) {
+            blockPayload[XMODEM_PAYLOAD_LENGTH - i] = SUB;
         }
 
         SerialDebug.println(F("*** Sending data block ***"));

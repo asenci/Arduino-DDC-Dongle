@@ -11,15 +11,15 @@
 
 void dumpByte(uint8_t b);
 
-void hexDump(const __FlashStringHelper *name, uint8_t *data, int length = 1, int indent = 0);
+void hexDump(const __FlashStringHelper *name, uint8_t *data, uint16_t length = 1, uint8_t indent = 0);
 
-void hexDump(uint8_t *data, int length = 1, int indent = 0);
+void hexDump(uint8_t *data, uint16_t length = 1, uint8_t indent = 0);
 
 
 #else //NODEBUG
 #define dumpByte(x)
 #define hexDump(x, y, z)
-#define SerialDebug if(0)Serial
+#define SerialDebug if(0)Serial1
 
 #endif //NODEBUG
 
