@@ -9,7 +9,7 @@
 // cppcheck-suppress unusedFunction
 void setup() {
     // Initialise software serial for debugging
-    SerialDebug.begin(115200);
+    SetupSerialDebug
     SerialDebug.println(F("***** Booting up *****"));
 
     // Use vccDetectPin for host VCC detection
