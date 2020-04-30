@@ -3,9 +3,8 @@
 
 #include <Arduino.h>
 
-#define HOT_PLUG 8
-#define VCC_DETECT 7
-#define VCC_ENABLE 6
+#define HOT_PLUG 3
+#define HOST_VCC 2
 
 #ifndef LED_BUILTIN
 #define LED_BUILTIN 13

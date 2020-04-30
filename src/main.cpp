@@ -12,17 +12,12 @@ void setup() {
     SetupSerialDebug
     SerialDebug.println(F("***** Booting up *****"));
 
-    // Use vccDetectPin for host VCC detection
-    pinMode(VCC_DETECT, INPUT);
-    digitalWrite(VCC_DETECT, LOW);
-
-    // Use vccEnablePin for sink power supply
-    // Host must provide a +5v power source before the sink can advertise hot plug
-    pinMode(VCC_ENABLE, OUTPUT);
-    digitalWrite(VCC_ENABLE, LOW);
+    // Used for host VCC detection
+    pinMode(HOST_VCC, INPUT);
+    digitalWrite(HOST_VCC, LOW);
 
     // Enter host mode if host Vcc is not detected
-    if (digitalRead(VCC_DETECT) == LOW) {
+    if (digitalRead(HOST_VCC) == LOW) {
         SerialDebug.println(F("**** Host power not detected, entering host mode ****"));
 
         // Use hotPlugDetectPin for hotplug detection
@@ -38,7 +33,8 @@ void setup() {
 
         // Present power to sink
         SerialDebug.println(F("**** Presenting power to sink ****"));
-        digitalWrite(VCC_ENABLE, HIGH);
+        pinMode(HOST_VCC, OUTPUT);
+        digitalWrite(HOST_VCC, HIGH);
 
         // DDC specifies sink must be ready to reply to host within 20ms
         delay(20);
